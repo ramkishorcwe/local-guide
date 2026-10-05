@@ -17,8 +17,8 @@ export const account = new Account(client);
 export const storage = new Storage(client);
 
 export const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-export const POIS_COLLECTION_ID = "pois";
-export const TRIPS_COLLECTION_ID = "trips";
-export const BOOKINGS_COLLECTION_ID = "bookings";
+export const POIS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_COLLECTION_ID
+export const TRIPS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_TRIPS_COLLECTION_ID;
+export const BOOKINGS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_BOOKING_COLLECTION_ID;
 
 export { ID, Query };

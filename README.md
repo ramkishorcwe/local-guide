@@ -30,3 +30,25 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+
+src/
+├── data/
+│   ├── pois.ts              # ✅ unchanged — 20 Jaipur POIs
+│   ├── trips.ts             # ✅ unchanged
+│   └── bookings.ts          # ✅ unchanged
+├── hooks/
+│   ├── usePOIs.ts           # 🔄 updated for Appwrite
+│   ├── useTrip.ts           # 🔄 updated for Appwrite
+│   └── useBookings.ts       # 🔄 updated for Appwrite
+├── lib/
+│   └── appwrite.ts          # 🔄 NEW — replaces firebase.ts
+├── scripts/
+│   └── seedAppwrite.ts      # 🔄 updated
+├── components/
+│   ├── ChatBox.tsx
+│   ├── MapView.tsx
+│   ├── POICard.tsx
+│   └── CommissionCard.tsx
+├── App.tsx                  # ✅ unchanged
+└── main.tsx                 # ✅ mostly unchanged
