@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { config } from 'dotenv';
-import { chatHTTP, bookingHTTP } from './http';
+import { chatHTTP, bookingHTTP } from './http.js';
 config({ path: '.env.local' });
 config({ path: '.env' });
 createServer((req, res) => {

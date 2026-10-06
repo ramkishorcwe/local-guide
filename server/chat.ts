@@ -1,6 +1,6 @@
 import type { ChatMessage, ChatEvent } from '../src/types/trip';
-import { runGuide } from '../src/lib/gemini';
-import { loadPOIs, HttpError } from './appwrite';
+import { runGuide } from '../src/lib/gemini.js';
+import { loadPOIs, HttpError } from './appwrite.js';
 
 export function parseMessages(body: unknown): Pick<ChatMessage, 'role' | 'text'>[] {
   const messages = (body as { messages?: unknown } | null)?.messages;

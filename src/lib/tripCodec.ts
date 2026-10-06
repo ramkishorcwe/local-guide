@@ -1,5 +1,5 @@
 import type { RoutePlan, Trip, TripStop } from '../types/trip';
-import { documentCreatedAt } from './documentTimestamp';
+import { documentCreatedAt } from './documentTimestamp.js';
 
 const categories = ['restaurant', 'attraction', 'experience', 'shopping', 'cafe', 'wellness', 'park', 'transport'];
 function validateStop(value: unknown): TripStop {

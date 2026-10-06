@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "tsx --test tests/planner.test.ts tests/sse.test.ts tests/gemini.test.ts tests/booking.test.ts tests/schema.test.ts",
+    "test": "tsx --test tests/planner.test.ts tests/sse.test.ts tests/gemini.test.ts tests/booking.test.ts tests/schema.test.ts tests/runtime.test.ts",
     "seed": "tsx src/scripts/seedAppwrite.ts",
     "build:function": "esbuild functions/index.ts --bundle --platform=node --format=esm --packages=external --outfile=functions/dist/index.js"
   },

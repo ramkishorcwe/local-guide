@@ -63,7 +63,11 @@ Booking confirmation posts only trip/POI/request IDs. The server checks trip mem
 
 ## Deploy
 
+Production: [local-guide-sigma.vercel.app](https://local-guide-sigma.vercel.app/). The Vercel project `ram-kishors-projects/local-guide` is connected to GitHub `main`; pushes trigger production deployments. The exact production hostname is registered as an Appwrite web app. Public Appwrite configuration and the server-only Gemini key/model are configured in Vercel environment variables.
+
 **Vercel:** import this repository as a Vite project; `vercel.json` configures the build and SPA routes. `/api/chat` streams SSE and `/api/bookings` records demo reservations. Set public Appwrite variables and server `GEMINI_API_KEY` / `GEMINI_MODEL` in Vercel. Add the Vercel hostname as an Appwrite Web platform. The streaming function allows up to 120 seconds; a 10-second response target is not yet measured.
+
+Server runtime imports use explicit `.js` extensions so the transpiled functions load under native Node ESM. The runtime regression test compiles the complete API dependency graph and imports both handlers without `tsx`; Vite's development resolver alone would miss extensionless imports that fail on Vercel.
 
 **Appwrite Functions:** a reusable buffered adapter is supplied in `functions/index.ts`. Deploy with repository root `.`, Node 20+, build command `npm ci && npm run build:function`, entrypoint `functions/dist/index.js`, public execution permission, and the Appwrite/Gemini environment variables. `/bookings` handles reservations; `/` returns collected chat events as JSON. The default frontend uses Vercel endpoints. Wiring the buffered adapter to React would require a different transport; it is not token streaming.
 
@@ -78,7 +82,7 @@ npm run build
 npm run build:function
 ```
 
-Focused tests cover hours/IST/overnight visits, route budgets, unknown IDs, dietary filters, Appwrite codecs, SSE fragmentation, tool history/signatures, cancellation, bounded loops, provider error handling and credential redaction, WhatsApp links and booking deduplication. A live Gemini integration test with a fictional cafe completed search, hours checking, route building and final streamed text in about 43 seconds. Saving shared trips and reservations still require the external setup above. No deployment has been performed.
+Focused tests cover hours/IST/overnight visits, route budgets, unknown IDs, dietary filters, Appwrite codecs, SSE fragmentation, tool history/signatures, cancellation, bounded loops, provider error handling and credential redaction, native Node ESM loading of the API handlers, WhatsApp links and booking deduplication. A live Gemini integration test with a fictional cafe completed search, hours checking, route building and final streamed text in about 43 seconds. Saving shared trips and reservations still require the external permissions above.
 
 Lint completes with zero errors and three notices on asynchronous Appwrite loading effects.
 

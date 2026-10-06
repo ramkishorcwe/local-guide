@@ -1,2 +1,2 @@
-export { chatHTTP as default } from '../server/http';
+export { chatHTTP as default } from '../server/http.js';
 export const config = { maxDuration: 120 };

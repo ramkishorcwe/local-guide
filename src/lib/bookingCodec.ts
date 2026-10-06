@@ -1,5 +1,5 @@
 import type { Booking } from '../interfaces';
-import { documentCreatedAt } from './documentTimestamp';
+import { documentCreatedAt } from './documentTimestamp.js';
 
 export function docToBooking(doc: Record<string, unknown>): Booking {
   if (typeof doc.$id !== 'string' || typeof doc.tripCode !== 'string' || typeof doc.poiId !== 'string'

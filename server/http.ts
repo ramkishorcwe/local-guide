@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { HttpError } from './appwrite';
-import { handleChat } from './chat';
-import { handleBooking } from './booking';
-import { guideErrorMessage, reportGuideError } from './guideErrors';
+import { HttpError } from './appwrite.js';
+import { handleChat } from './chat.js';
+import { handleBooking } from './booking.js';
+import { guideErrorMessage, reportGuideError } from './guideErrors.js';
 import type { ChatEvent } from '../src/types/trip';
 
 export async function readBody(req: IncomingMessage): Promise<unknown> {

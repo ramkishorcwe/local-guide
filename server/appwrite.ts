@@ -1,5 +1,5 @@
 import { Query } from 'appwrite';
-import { docToPOI, type POIDocument } from '../src/lib/poiCodec';
+import { docToPOI, type POIDocument } from '../src/lib/poiCodec.js';
 import type { IPoi } from '../src/interfaces';
 
 export class HttpError extends Error {

@@ -1,1 +1,1 @@
-export { bookingHTTP as default } from '../server/http';
+export { bookingHTTP as default } from '../server/http.js';

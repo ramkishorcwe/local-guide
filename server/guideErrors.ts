@@ -1,5 +1,5 @@
 import { ApiError } from '@google/genai';
-import { HttpError } from './appwrite';
+import { HttpError } from './appwrite.js';
 
 export function guideErrorMessage(error: unknown, aborted = false): string {
   if (aborted) return 'Guide took too long. Please try a simpler request.';

@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
-import { appwriteRequest, collectionId, HttpError } from './appwrite';
-import { docToPOI, type POIDocument } from '../src/lib/poiCodec';
-import { price } from '../src/lib/planner';
+import { appwriteRequest, collectionId, HttpError } from './appwrite.js';
+import { docToPOI, type POIDocument } from '../src/lib/poiCodec.js';
+import { price } from '../src/lib/planner.js';
 import type { Booking } from '../src/interfaces';
-import { docToBooking } from '../src/lib/bookingCodec';
-import { deserializeStops } from '../src/lib/tripCodec';
+import { docToBooking } from '../src/lib/bookingCodec.js';
+import { deserializeStops } from '../src/lib/tripCodec.js';
 
 export async function handleBooking(body: unknown): Promise<Booking> {
   const { tripCode, poiId, requestId } = (body || {}) as Record<string, unknown>;

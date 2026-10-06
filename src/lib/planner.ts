@@ -1,6 +1,6 @@
 import type { IPoi } from '../interfaces';
 import type { RoutePlan, TripStop } from '../types/trip';
-import { haversineKm } from '../utils/distance';
+import { haversineKm } from '../utils/distance.js';
 export const HOTEL = { name: 'Hotel Pearl Palace', lat: 26.9165, lng: 75.7918 };
 const minute = 60_000;
 const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];

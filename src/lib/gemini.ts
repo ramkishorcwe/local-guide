@@ -3,7 +3,7 @@ import { GoogleGenAI, FunctionCallingConfigMode, type Content, type FunctionDecl
   type GenerateContentParameters, type GenerateContentResponse, type Part } from '@google/genai';
 import type { IPoi } from '../interfaces';
 import type { ChatEvent, ChatMessage, RoutePlan } from '../types/trip';
-import { buildRoute, checkHours, searchPOIs, price, type SearchFilters } from './planner';
+import { buildRoute, checkHours, searchPOIs, price, type SearchFilters } from './planner.js';
 
 export const SYSTEM_PROMPT = `You are Guide, a warm travel companion for Hotel Pearl Palace in Jaipur.
 Respond in Hinglish unless the guest writes in pure English. Use concise plain text.
