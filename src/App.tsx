@@ -2,11 +2,14 @@ import { useEffect } from 'react'
 import { client } from "./services/appwrite";
 import { usePOIs } from "./hooks/usePOIs";
 import './App.css'
+import { seedPOIs } from './scripts/seedAppwrite';
 
-function App() {
+function Home() {
   const { pois, loading } = usePOIs();
   useEffect(() => {
-
+    (async ()=>{
+      await seedPOIs();
+    })()
     client.ping()
       .then(() => console.log("Appwrite connected successfully"))
       .catch((error) => console.error("Appwrite connection failed:", error));
@@ -37,5 +40,40 @@ function App() {
   );
 }
 
-export default App
+// export default Home
 
+
+
+
+
+
+
+
+
+import { useState } from "react";
+import AdminLogin from "./components/pages/AdminLogin";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import { useAdminAuth } from "./hooks/useAdminAuth";
+
+function App() {
+  const { user, loading } = useAdminAuth();
+  const [, forceUpdate] = useState(0);
+
+  // Simple route: /admin
+  const isAdminRoute = window.location.pathname === "/admin";
+
+  if (!isAdminRoute) {
+    // Your guest app (chat + map)
+    return <GuestApp />;
+  }
+
+  if (loading) return <div className="min-h-screen bg-navy" />;
+  if (!user) return <AdminLogin onSuccess={() => forceUpdate((n) => n + 1)} />;
+  return <AdminDashboard onLogout={() => forceUpdate((n) => n + 1)} />;
+}
+
+function GuestApp() {
+  return <div className="min-h-screen bg-navy text-white p-8">Guest app here</div>;
+}
+
+export default App;
