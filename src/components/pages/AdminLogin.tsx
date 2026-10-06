@@ -56,8 +56,10 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-navy border border-white/10 rounded-lg pl-10 pr-4 py-3 text-black focus:border-gold focus:outline-none"
-                placeholder="admin@jaipursaathi.com"
+                aria-label="Admin email"
+                autoComplete="username"
+                className="w-full bg-navy border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white focus:border-gold focus:outline-none"
+                placeholder="admin@localguide.app"
               />
             </div>
           </div>
@@ -74,7 +76,9 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-navy border border-white/10 rounded-lg pl-10 pr-4 py-3 text-black focus:border-gold focus:outline-none"
+                aria-label="Admin password"
+                autoComplete="current-password"
+                className="w-full bg-navy border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white focus:border-gold focus:outline-none"
                 placeholder="••••••••"
               />
             </div>

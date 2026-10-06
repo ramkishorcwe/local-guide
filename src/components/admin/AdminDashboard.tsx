@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAdminAuth } from "../../hooks/useAdminAuth";
 import {
   listPOIs,
@@ -10,6 +10,8 @@ import type { IPoi } from "../../interfaces";
 import POIFormModal from "../../components/admin/POIFormModal";
 import ConfirmDelete from "../../components/admin/ConfirmDelete";
 import { Plus, Pencil, Trash2, LogOut, Search, Star, Users } from "lucide-react";
+import CommissionCard from '../CommissionCard';
+import { Link } from 'react-router-dom';
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const { logout } = useAdminAuth();
@@ -22,8 +24,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  const refresh = async () => {
-    setLoading(true);
+  const showToast = useCallback((msg: string, type: "success" | "error" = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const load = useCallback(async () => {
     try {
       const data = await listPOIs();
       setPois(data);
@@ -33,16 +39,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+  const refresh = () => { setLoading(true); return load(); };
 
   useEffect(() => {
-    refresh();
-  }, []);
-
-  const showToast = (msg: string, type: "success" | "error" = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+    void load();
+  }, [load]);
 
   const handleSave = async (data: Partial<IPoi>) => {
     try {
@@ -72,7 +74,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       showToast("POI deleted");
       setDeletingPOI(null);
       await refresh();
-    } catch (err) {
+    } catch {
       showToast("Delete failed", "error");
     } finally {
       setDeleteLoading(false);
@@ -80,8 +82,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   const handleLogout = async () => {
-    await logout();
-    onLogout();
+    try { await logout(); onLogout(); }
+    catch { showToast('Could not sign out. Try again.', 'error'); }
   };
 
   const filtered = pois.filter(
@@ -93,13 +95,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const partnerCount = pois.filter((p) => p.partner).length;
 
   return (
-    <div className="min-h-screen bg-navy text-black">
+    <div className="min-h-screen bg-navy text-white">
       {/* Top bar */}
       <header className="border-b border-white/10 sticky top-0 bg-navy/95 backdrop-blur z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gold">Local Guide</h1>
             <p className="text-xs text-gray-400">Admin Panel</p>
+            <Link to="/" className="text-xs text-teal">View guest app</Link>
           </div>
           <button
             onClick={handleLogout}
@@ -129,6 +132,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         />
       </div>
 
+      <div className="px-6"><CommissionCard /></div>
       {/* Toolbar */}
       <div className="max-w-7xl mx-auto px-6 pb-4 flex flex-wrap items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
@@ -138,6 +142,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           />
           <input
             value={search}
+            aria-label="Search places"
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or area..."
             className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder:text-gray-500 focus:border-gold focus:outline-none"

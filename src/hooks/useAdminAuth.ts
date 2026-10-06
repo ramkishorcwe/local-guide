@@ -1,29 +1,27 @@
-import { useEffect, useState } from "react";
-import { account } from "../services/appwrite";
-
+import { useEffect } from 'react';
+import { create } from 'zustand';
+import type { Models } from 'appwrite';
+import { account, appwriteConfigured } from '../lib/appwrite';
+type AuthState = { user: Models.User<Models.Preferences> | null; loading: boolean; initialized: boolean;
+  initialize: () => Promise<void>; login: (email: string, password: string) => Promise<void>; logout: () => Promise<void> };
+const useAuthStore = create<AuthState>((set, get) => ({
+  user: null, loading: true, initialized: false,
+  initialize: async () => {
+    if (get().initialized) return;
+    set({ initialized: true });
+    try { set({ user: appwriteConfigured ? await account.get() : null }); }
+    catch { set({ user: null }); }
+    finally { set({ loading: false }); }
+  },
+  login: async (email, password) => {
+    await account.createEmailPasswordSession({ email, password });
+    set({ user: await account.get(), loading: false });
+  },
+  logout: async () => { await account.deleteSession({ sessionId: 'current' }); set({ user: null }); },
+}));
 export function useAdminAuth() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    account
-      .get()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    await account.createEmailPasswordSession(email, password);
-    const u = await account.get();
-    setUser(u);
-    return u;
-  };
-
-  const logout = async () => {
-    await account.deleteSession("current");
-    setUser(null);
-  };
-
-  return { user, loading, login, logout };
+  const state = useAuthStore();
+  const initialize = state.initialize;
+  useEffect(() => { void initialize(); }, [initialize]);
+  return state;
 }

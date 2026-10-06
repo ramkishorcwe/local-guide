@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useDialog } from '../../hooks/useDialog';
 import type { IPoi } from "../../interfaces";
 import { X, Save } from "lucide-react";
 
@@ -51,6 +52,8 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const dialog = useRef<HTMLDivElement>(null);
+  useDialog(dialog, onClose, saving);
 
   const update = (key: keyof IPoi, value: any) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -71,12 +74,12 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-      <div className="bg-navy border border-gold/20 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div ref={dialog} role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit place' : 'Add place'} className="bg-navy border border-gold/20 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-white/10 sticky top-0 bg-navy z-10">
           <h2 className="text-xl font-bold text-gold">
             {isEdit ? "Edit POI" : "Add New POI"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button aria-label="Close place editor" disabled={saving} onClick={onClose} className="text-gray-400 hover:text-white">
             <X size={22} />
           </button>
         </div>
@@ -169,6 +172,16 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
             </Field>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Cuisine"><input className="input" value={form.cuisine ?? ''} onChange={(e) => update('cuisine', e.target.value)} /></Field>
+            <Field label="Distance from hotel (km)"><input className="input" type="number" min="0" step="0.1" value={form.distanceFromHotelKm ?? 0} onChange={(e) => update('distanceFromHotelKm', Number(e.target.value))} /></Field>
+            <Field label="Experience price (INR)"><input className="input" type="number" min="0" step="1" value={form.priceINR ?? ''} onChange={(e) => update('priceINR', e.target.value ? Number(e.target.value) : undefined)} /></Field>
+            <Field label="Indian entry fee (INR)"><input className="input" type="number" min="0" step="1" value={form.entryFeeINR ?? ''} onChange={(e) => update('entryFeeINR', e.target.value ? Number(e.target.value) : undefined)} /></Field>
+            <Field label="Foreigner entry fee (INR)"><input className="input" type="number" min="0" step="1" value={form.foreignerFeeINR ?? ''} onChange={(e) => update('foreignerFeeINR', e.target.value ? Number(e.target.value) : undefined)} /></Field>
+            <Field label="Price level (1–4)"><input className="input" type="number" min="1" max="4" value={form.priceLevel ?? ''} onChange={(e) => update('priceLevel', e.target.value ? Number(e.target.value) : undefined)} /></Field>
+          </div>
+          <Field label="Booking URL"><input className="input" type="url" value={form.bookingUrl ?? ''} onChange={(e) => update('bookingUrl', e.target.value || null)} /></Field>
+          <fieldset className="rounded-xl border border-white/10 p-4"><legend className="px-2 text-xs text-gray-400">Weekly opening hours · Asia/Kolkata</legend><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((day) => <label key={day} className="text-xs uppercase text-gray-400">{day}<input aria-label={`${day} opening hours`} className="input mt-1 text-xs" placeholder="09:00-18:00 or closed" value={form.openHours?.[day] ?? ''} onChange={(e) => update('openHours', { ...form.openHours, [day]: e.target.value })} required /></label>)}</div></fieldset>
           <Field label="Tags (comma-separated)">
             <input
               value={(form.tags ?? []).join(", ")}
@@ -202,6 +215,8 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
           </Field>
 
           <div className="flex flex-wrap gap-6">
+            <Checkbox label="Jain food available" checked={!!form.jainFoodAvailable} onChange={(v) => update('jainFoodAvailable', v)} />
+            <Checkbox label="Rooftop" checked={!!form.hasRooftop} onChange={(v) => update('hasRooftop', v)} />
             <Checkbox
               label="Kid-friendly"
               checked={!!form.kidFriendly}
@@ -240,6 +255,7 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
           <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
             <button
               type="button"
+              disabled={saving}
               onClick={onClose}
               className="px-5 py-2.5 rounded-lg text-gray-300 hover:bg-white/5"
             >

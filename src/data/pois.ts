@@ -1,4 +1,5 @@
-import type { IPoi } from '../../src/interfaces';
+import type { IPoi } from '../interfaces';
+export type POI = IPoi;
 export const POIS: IPoi[] = [
     {
         id: "poi_001",
