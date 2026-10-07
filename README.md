@@ -55,6 +55,12 @@ The seed adds missing places from `src/data/pois.ts`, preserves existing IDs and
 
 ## Gemini and SSE
 
+Follow-up requests retain the current stops and start time unless the guest explicitly changes them. Named additions are required in the validated route; a failed revision leaves the current cards intact and supplies the actual conflict to the reply. User-written duration/budget limits override older requests; an assistant-invented two-hour limit is not carried forward. Removing a limit still respects opening hours and the 12-hour planning cap.
+
+The planner compares up to 720 stop orders for at most six places and chooses a feasible order with the least estimated transfer time, then distance. The visible explanation states estimated savings and closing-hour reasons. These are catalogue/straight-line estimates, not live road routing. Unknown dining prices remain quote-required options under a budget, with no claim that the price fits. Jaipur time labels are supplied to Gemini to prevent UTC times appearing in the guest narrative.
+
+Each assistant reply has its own pending/completed/failed/cancelled outcome. Progress belongs only to the active reply; empty responses and interrupted streams remain visible with a retry action. Retrying keeps the original guest message. The client has a 125-second overall response deadline in addition to the server deadline.
+
 `src/lib/gemini.ts` is server-only. It uses the maintained `@google/genai` SDK rather than the deprecated `@google/generative-ai`. `GEMINI_MODEL` defaults to the stable `gemini-3.5-flash-lite` model. A local diagnostic found `gemini-flash-latest` took about 49 seconds for a simple greeting, while Flash-Lite took 2.7 seconds; the old 30-second timeout caused `504 DEADLINE_EXCEEDED`. The latest alias can change its underlying model, so use a specific model available to your key. Individual calls allow 60 seconds; the HTTP request still has a 110-second overall deadline.
 
 Gemini failures now produce specific guest messages for quota/rate limits, timeouts, model availability and connection configuration. The API terminal logs the provider status and details with credentials redacted. Check the `[Guide]` entry when troubleshooting. Restart `npm run dev` after changing `GEMINI_MODEL` or the API key in `.env.local`.

@@ -9,6 +9,7 @@ export default function ItineraryTimeline({ plan, selectedId, onSelect, onBook, 
   if (!plan) return <div className="rounded-xl border border-dashed border-white/15 p-7 text-center"><CalendarDays size={25} className="mx-auto mb-3 text-gold/70" /><h3 className="text-sm font-medium">A day made for you</h3><p className="mt-2 text-xs leading-6 text-slate-500">Chat with Guide to bring your itinerary to life.<br />Your places will appear right here.</p></div>;
   return <div>
     <div className="mb-4 flex flex-wrap items-center gap-3 text-[11px] text-slate-400"><span className="flex items-center gap-1"><CalendarDays size={12} />{tripDate(plan.stops[0].startAt)}</span><span className="flex items-center gap-1"><Clock3 size={12} />{plan.totalMinutes} min</span><span className="flex items-center gap-1"><Route size={12} />{plan.totalDistanceKm} km</span></div>
+    {plan.routeNote && <p className="mb-4 rounded-xl border border-teal/20 bg-teal/5 p-3 text-xs leading-6 text-slate-300">{plan.routeNote}</p>}
     <ol className="space-y-3">{plan.stops.map((stop, index) => <motion.li key={stop.poiId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .08 }}
       className={`rounded-xl border p-4 transition ${selectedId === stop.poiId ? 'border-gold/60 bg-gold/5' : 'border-white/10 bg-white/[.025]'}`}>
       <div className="flex items-start gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-gold/30 text-xs text-gold">{index + 1}</span>
