@@ -5,7 +5,7 @@ import { runGuide, type GeminiModels } from '../src/lib/gemini';
 import { POIS } from '../src/data/pois';
 import { HOTEL } from '../src/lib/planner';
 import type { ChatEvent } from '../src/types/trip';
-import { parseMessages } from '../server/chat';
+import { parseMessages, parsePlanContext } from '../server/chat';
 import { guideErrorMessage, reportGuideError } from '../server/guideErrors';
 import { HttpError } from '../server/appwrite';
 function tool(name: string, args: Record<string, unknown>, id = name) {
@@ -22,7 +22,7 @@ test('multi-turn function loop preserves signatures/call IDs and streams only fi
     generateContent: async (input) => {
       snapshots.push(structuredClone(input));
       round++;
-      if (round === 1) { assert.equal(input.config?.toolConfig?.functionCallingConfig?.mode, FunctionCallingConfigMode.ANY); return tool('searchPOIs', {}); }
+      if (round === 1) { assert.equal(input.config?.toolConfig?.functionCallingConfig?.mode, FunctionCallingConfigMode.AUTO); return tool('searchPOIs', {}); }
       if (round === 2) return tool('checkHours', { poiId: poi.id, startISO: '2026-10-06T12:00:00+05:30', durationMinutes: 60 });
       return tool('buildRoute', { poiIds: [poi.id], startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 120 });
     },
@@ -81,5 +81,42 @@ test('provider failures remain actionable and server diagnostics redact credenti
   } finally {
     if (previous === undefined) delete process.env.GUIDE_TEST_SECRET;
     else process.env.GUIDE_TEST_SECRET = previous;
+  }
+});
+
+
+test('three-stop mixed itinerary completes without one model round per opening-hours check', async () => {
+  const places = ['Fictional Courtyard', 'Fictional Gallery', 'Fictional Cafe'].map((name, index) => ({
+    ...poi, id: `fixture-${index}`, name, category: index === 2 ? 'cafe' as const : 'attraction' as const,
+    cuisine: index === 2 ? 'Vegetarian' : '', pureVeg: index === 2, avgVisitMinutes: 30,
+  }));
+  const events: ChatEvent[] = [];
+  let rounds = 0;
+  const models: GeminiModels = {
+    generateContent: async () => {
+      rounds++;
+      if (rounds === 1) return tool('searchPOIs', { category: 'attraction', pureVeg: true });
+      if (rounds === 2) return tool('searchPOIs', { category: 'cafe' });
+      return tool('buildRoute', { poiIds: places.map(place => place.id), startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 180 });
+    },
+    generateContentStream: async input => {
+      assert.match(String(input.config?.systemInstruction), /Existing outing to revise/);
+      return (async function* () { const chunk = new GenerateContentResponse(); chunk.candidates = [{content:{role:'model',parts:[{text:'A courtyard, a gallery, then a relaxed cafe stop. Your three-stop outing is ready—use Save trip to keep it.'}]}}]; yield chunk; })();
+    },
+  };
+  await runGuide({ messages: [{ role: 'user', text: 'Plan three stops with heritage and pure veg food.' }], pois: places, models,
+    emit: event => events.push(event), planContext: { poiIds: [places[0].id], startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 180 } });
+  const itinerary = events.find(event => event.type === 'itinerary');
+  assert.equal(itinerary?.type === 'itinerary' && itinerary.plan.stops.length, 3);
+  assert.equal(rounds, 3);
+  assert.equal(events.at(-1)?.type, 'done');
+});
+
+test('outing context accepts a bounded schedule and rejects forged or ambiguous shapes', () => {
+  const context = { poiIds: ['fixture-1', 'fixture-2'], startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 180 };
+  assert.deepEqual(parsePlanContext({ planContext: context }), context);
+  assert.equal(parsePlanContext({ messages: [] }), undefined);
+  for (const patch of [{ poiIds: ['fixture-1', 'fixture-1'] }, { startISO: '2026-10-06T12:00:00' }, { availableMinutes: 1000 }, { poiIds: [] }]) {
+    assert.throws(() => parsePlanContext({ planContext: { ...context, ...patch } }), /valid start time/);
   }
 });

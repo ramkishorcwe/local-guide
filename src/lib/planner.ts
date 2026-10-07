@@ -1,21 +1,24 @@
 import type { IPoi } from '../interfaces';
 import type { RoutePlan, TripStop } from '../types/trip';
 import { haversineKm } from '../utils/distance.js';
+import { makeNaturalKey } from '../utility/naturalKey.js';
 export const HOTEL = { name: 'Hotel Pearl Palace', lat: 26.9165, lng: 75.7918 };
 const minute = 60_000;
 const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export type SearchFilters = { query?: string; category?: IPoi['category']; kidFriendly?: boolean;
-  pureVeg?: boolean; jainFoodAvailable?: boolean; indoor?: boolean; maxPriceINR?: number };
+  categories?: IPoi['category'][]; pureVeg?: boolean; jainFoodAvailable?: boolean; indoor?: boolean; maxPriceINR?: number };
 export function searchPOIs(pois: IPoi[], filters: SearchFilters) {
   const words = (filters.query || '').toLowerCase().split(/\s+/).filter(Boolean);
   return pois.filter((poi) => {
     const text = `${poi.name} ${poi.area} ${poi.category} ${poi.subCategory} ${poi.cuisine || ''} ${poi.tags.join(' ')}`.toLowerCase();
+    const servesFood = ['restaurant', 'cafe'].includes(poi.category) || !!poi.cuisine?.trim();
     return (!words.length || words.every((word) => text.includes(word)))
       && (!filters.category || poi.category === filters.category)
+      && (!filters.categories?.length || filters.categories.includes(poi.category))
       && (filters.kidFriendly === undefined || poi.kidFriendly === filters.kidFriendly)
       && (filters.indoor === undefined || poi.indoor === filters.indoor)
-      && (!filters.pureVeg || poi.pureVeg === true)
-      && (!filters.jainFoodAvailable || poi.jainFoodAvailable === true)
+      && (!servesFood || !filters.pureVeg || poi.pureVeg === true)
+      && (!servesFood || !filters.jainFoodAvailable || poi.jainFoodAvailable === true)
       && (filters.maxPriceINR === undefined || (price(poi) !== undefined && price(poi)! <= filters.maxPriceINR));
   }).sort((a, b) => b.rating - a.rating).slice(0, 30);
 }
@@ -68,12 +71,16 @@ export function checkHours(poi: IPoi, startAt: number, durationMinutes: number) 
 export function buildRoute(pois: IPoi[], ids: string[], startAt: number, availableMinutes: number): RoutePlan {
   if (!ids.length || ids.length > 6 || new Set(ids).size !== ids.length) throw new Error('Choose 1–6 distinct places');
   if (!Number.isFinite(startAt) || !Number.isInteger(availableMinutes) || availableMinutes < 15 || availableMinutes > 720) throw new Error('Use a valid start time and 15–720 available minutes');
+  const places = ids.map(id => {
+    const poi = pois.find(item => item.id === id);
+    if (!poi) throw new Error(`Unknown POI: ${id}`);
+    return poi;
+  });
+  if (new Set(places.map(makeNaturalKey)).size !== places.length) throw new Error('The same place appears twice. Choose distinct places for your outing.');
   let current = HOTEL;
   let now = startAt;
   let totalDistanceKm = 0;
-  const stops: TripStop[] = ids.map((id) => {
-    const poi = pois.find((item) => item.id === id);
-    if (!poi) throw new Error(`Unknown POI: ${id}`);
+  const stops: TripStop[] = places.map((poi) => {
     const distanceKm = haversineKm(current.lat, current.lng, poi.lat, poi.lng);
     // Straight-line distance × 1.3 estimates roads; 18 km/h + 5 minute buffer.
     const travelMinutes = Math.max(5, Math.ceil(distanceKm * 1.3 / 18 * 60) + 5);
@@ -89,5 +96,5 @@ export function buildRoute(pois: IPoi[], ids: string[], startAt: number, availab
       distanceKm: Math.round(distanceKm * 10) / 10, priceINR: price(poi) ?? -1,
       partner: poi.partner, commissionPct: poi.commissionPct };
   });
-  return { stops, totalMinutes: Math.ceil((now - startAt) / minute), totalDistanceKm: Math.round(totalDistanceKm * 10) / 10 };
+  return { stops, totalMinutes: Math.ceil((now - startAt) / minute), totalDistanceKm: Math.round(totalDistanceKm * 10) / 10, startAt, availableMinutes };
 }

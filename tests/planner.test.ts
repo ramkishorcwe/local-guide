@@ -37,7 +37,7 @@ test('overnight, split hours and 24-hour schedules handle midnight correctly', (
 test('diet filters are strict and unknown prices are not treated as free', () => {
   const results = searchPOIs(POIS, { pureVeg: true, kidFriendly: true });
   assert.ok(results.length);
-  assert.ok(results.every((item) => item.pureVeg && item.kidFriendly));
+  assert.ok(results.every((item) => item.kidFriendly && (!['restaurant', 'cafe'].includes(item.category) || item.pureVeg)));
   assert.equal(searchPOIs([{ ...poi, priceINR: undefined, entryFeeINR: undefined }], { maxPriceINR: 100 }).length, 0);
 });
 test('route rejects unknown IDs, duplicate stops, overlong days, and closure after travel', () => {
@@ -54,19 +54,35 @@ test('route rejects unknown IDs, duplicate stops, overlong days, and closure aft
     assert.deepEqual(deserializeStops(serializeStops(route.stops)), route.stops);
   }
 });
-test('tool executor enforces searched IDs, hours calls, preference resets and revalidation', async () => {
+test('tool executor enforces searched IDs, accumulated candidates, hard preferences and actual arrival validation', async () => {
   const executor = createToolExecutor([poi]);
   await assert.rejects(executor.execute('checkHours', { poiId: poi.id, startISO: '2026-10-06T12:00:00+05:30', durationMinutes: 60 }), /returned by searchPOIs/);
   await executor.execute('searchPOIs', {});
   const routeArgs = { poiIds: [poi.id], startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 120 };
-  await assert.rejects(executor.execute('buildRoute', routeArgs), /checkHours/);
+  await executor.execute('buildRoute', routeArgs);
   await executor.execute('checkHours', { poiId: poi.id, startISO: routeArgs.startISO, durationMinutes: 60 });
   await executor.execute('buildRoute', routeArgs);
   assert.equal(executor.plan?.stops[0].poiId, poi.id);
   await assert.rejects(executor.execute('buildRoute', { ...routeArgs, startISO: '2026-10-06T17:00:00+05:30' }), /closed/);
   assert.equal(executor.plan, undefined);
   await executor.execute('searchPOIs', { query: 'no such place' });
+  await executor.execute('getPartnerDeal', { poiId: poi.id });
+  await executor.execute('searchPOIs', { indoor: !poi.indoor });
   await assert.rejects(executor.execute('getPartnerDeal', { poiId: poi.id }), /returned by searchPOIs/);
+});
+
+test('mixed heritage and veg food searches retain all candidates while excluding unsafe food', async () => {
+  const monument = { ...poi, id: 'monument', name: 'Fictional Courtyard', category: 'attraction' as const, cuisine: '', pureVeg: false };
+  const nonVeg = { ...poi, id: 'nonveg', name: 'Fictional Grill', pureVeg: false };
+  const executor = createToolExecutor([poi, monument, nonVeg]);
+  await executor.execute('searchPOIs', { category: 'attraction', pureVeg: true });
+  await executor.execute('searchPOIs', { category: 'restaurant' });
+  await assert.rejects(executor.execute('buildRoute', { poiIds: [monument.id, nonVeg.id], startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 240 }), /returned by searchPOIs/);
+  await executor.execute('buildRoute', { poiIds: [monument.id, poi.id], startISO: '2026-10-06T12:00:00+05:30', availableMinutes: 240 });
+  assert.deepEqual(executor.plan?.stops.map(stop => stop.poiId), [monument.id, poi.id]);
+  assert.equal(executor.plan?.totalMinutes, 130);
+  const samePlace = { ...poi, id: 'duplicate', name: `  ${poi.name.toUpperCase()}  ` };
+  assert.throws(() => buildRoute([poi, samePlace], [poi.id, samePlace.id], startAt, 240), /same place/);
 });
 test('timestamps require timezone and Haversine distance is symmetric', () => {
   assert.throws(() => parseStartISO('2026-10-06T12:00:00'), /timezone/);

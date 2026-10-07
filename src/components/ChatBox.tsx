@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowUp, Sparkles, Square, Compass, RotateCcw } from 'lucide-react';
 import { useGuideStore } from '../store/guide';
 import { streamChat } from '../lib/chatClient';
+import ChatText from './ChatText';
 const suggestions = ['Aaj shaam kya karein? 2 bachche hain', 'Plan 3 hours of heritage and local food', 'Pure veg dinner, budget ₹1,000'];
 export default function ChatBox() {
   const { messages, busy, status, error, patch, draft: input, focusInput } = useGuideStore();
@@ -16,21 +17,28 @@ export default function ChatBox() {
   async function send(value: string, retry = false) {
     const text = value.trim();
     if (!text || useGuideStore.getState().busy) return;
-    const previous = useGuideStore.getState().messages;
+    const state = useGuideStore.getState();
+    const previous = state.messages;
     // Retrying a failed request removes its partial assistant answer and last user turn.
     const base = retry ? previous.slice(0, -2) : previous;
     const user = { id: crypto.randomUUID(), role: 'user' as const, text };
     const assistant = { id: crypto.randomUUID(), role: 'assistant' as const, text: '' };
     const history = [...base, user];
-    patch({ messages: [...history, assistant], busy: true, status: 'Guide is thinking…', error: '', plan: null, trip: null, guestQuery: text, selectedId: null });
+    // Keep the last usable itinerary (and its saved link) while revising it.
+    patch({ messages: [...history, assistant], busy: true, status: 'Let me put that together…', error: '' });
     patch({ draft: '' });
     controller.current = new AbortController();
     try {
       await streamChat(history.filter((message) => message.text.trim()), (event) => {
         if (event.type === 'text') patch({ messages: useGuideStore.getState().messages.map((message) => message.id === assistant.id ? { ...message, text: message.text + event.delta } : message) });
         if (event.type === 'status') patch({ status: event.message });
-        if (event.type === 'itinerary') patch({ plan: event.plan });
-      }, controller.current.signal);
+        if (event.type === 'itinerary') useGuideStore.getState().setItinerary(event.plan,
+          history.filter(message => message.role === 'user').map(message => message.text).join('\n'));
+      }, controller.current.signal, state.plan ? {
+        poiIds: state.plan.stops.map(stop => stop.poiId),
+        startISO: new Date(state.plan.startAt ?? state.plan.stops[0].startAt - state.plan.stops[0].travelMinutes * 60_000).toISOString(),
+        availableMinutes: state.plan.availableMinutes ?? state.plan.totalMinutes,
+      } : undefined);
     } catch (err) {
       const cancelled = controller.current.signal.aborted;
       patch({ error: cancelled ? 'Response stopped. You can retry your request.' : err instanceof Error ? err.message : 'Guide could not connect.' });
@@ -53,7 +61,7 @@ export default function ChatBox() {
       {messages.filter((message) => busy || message.text).map((message) => <motion.div key={message.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
         {message.role === 'assistant' && <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gold/10 text-gold"><Sparkles size={14} /></span>}
         <div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-7 ${message.role === 'user' ? 'rounded-br-sm bg-gold/15 text-amber-100' : 'rounded-bl-sm bg-white/5 text-slate-200'}`}>
-          {message.text || (busy ? <span className="text-slate-400">{status || 'Thinking…'}</span> : <span className="text-slate-500">No response received.</span>)}
+          {message.text ? message.role === 'assistant' ? <ChatText text={message.text} /> : message.text : (busy ? <span className="text-slate-400">{status || 'Thinking…'}</span> : <span className="text-slate-500">No response received.</span>)}
         </div>
       </motion.div>)}
       {busy && messages.at(-1)?.text && <p className="pl-10 text-xs text-teal" role="status">{status}</p>}
@@ -62,7 +70,7 @@ export default function ChatBox() {
       </div>}
     </div>
     <div className="border-t border-white/10 p-4 sm:p-5">
-      {!!messages.length && <div className="mb-3 flex flex-wrap gap-2">{['More food', 'Indoor', 'Cheaper'].map((label) => <button key={label} disabled={busy} onClick={() => void send(label)} className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-slate-400 hover:text-gold disabled:opacity-40">{label}</button>)}</div>}
+      {!!messages.length && <div className="mb-3 flex flex-wrap gap-2">{['Add a food stop', 'Make it indoor', 'Make it cheaper'].map((label) => <button key={label} disabled={busy} onClick={() => void send(label)} className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-slate-400 hover:text-gold disabled:opacity-40">{label}</button>)}</div>}
       <form onSubmit={(event) => { event.preventDefault(); void send(input); }} className="flex items-end gap-2 rounded-xl border border-white/15 bg-navy p-2 focus-within:border-gold/50">
         <textarea ref={textarea} aria-label="Tell Guide your plans" placeholder="What would make today special?" value={input} maxLength={1000} rows={2} onChange={(event) => patch({ draft: event.target.value })}
           onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(input); } }}

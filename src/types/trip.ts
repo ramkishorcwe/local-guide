@@ -6,7 +6,8 @@ export type TripStop = {
   travelMinutes: number; distanceKm: number; priceINR: number;
   partner: boolean; commissionPct: number;
 };
-export type RoutePlan = { stops: TripStop[]; totalMinutes: number; totalDistanceKm: number };
+export type RoutePlan = { stops: TripStop[]; totalMinutes: number; totalDistanceKm: number; startAt?: number; availableMinutes?: number };
+export type PlanningContext = { poiIds: string[]; startISO: string; availableMinutes: number };
 export type Trip = RoutePlan & { code: string; guestQuery: string; createdAt: number };
 export type ChatMessage = { id: string; role: 'user' | 'assistant'; text: string };
 export type ChatEvent =
