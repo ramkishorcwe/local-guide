@@ -1,4 +1,5 @@
 import type { IPoi } from '../interfaces';
+import { makeNaturalKey, normalizePOIText } from '../utility/naturalKey.js';
 
 export type POIDocument = Omit<IPoi, 'id' | 'openHours' | 'bookingUrl' | 'foreignerFeeINR'> & {
   $id: string; openHours: string | string[]; bookingUrl?: string | null; foreignerFeeINR?: string | number | null;
@@ -22,11 +23,11 @@ export function docToPOI(doc: POIDocument): IPoi {
 }
 export function poiToPayload(poi: IPoi | Omit<IPoi, 'id'>) {
   return {
-    name: poi.name.trim(), category: poi.category, subCategory: poi.subCategory,
+    name: normalizePOIText(poi.name), category: poi.category, subCategory: poi.subCategory,
     cuisine: poi.cuisine ?? '', priceLevel: poi.priceLevel ?? 0,
     priceINR: poi.priceINR ?? 0, entryFeeINR: poi.entryFeeINR ?? 0,
     foreignerFeeINR: String(poi.foreignerFeeINR ?? 0), rating: poi.rating,
-    lat: poi.lat, lng: poi.lng, area: poi.area.trim(),
+    lat: poi.lat, lng: poi.lng, area: normalizePOIText(poi.area),
     openHours: JSON.stringify(poi.openHours),
     kidFriendly: poi.kidFriendly, indoor: poi.indoor,
     pureVeg: poi.pureVeg ?? false, jainFoodAvailable: poi.jainFoodAvailable ?? false,
@@ -34,6 +35,6 @@ export function poiToPayload(poi: IPoi | Omit<IPoi, 'id'>) {
     avgVisitMinutes: poi.avgVisitMinutes, partner: poi.partner,
     commissionPct: poi.commissionPct, bookingUrl: poi.bookingUrl || null,
     tags: poi.tags, imageUrl: poi.imageUrl, notes: poi.notes ?? '',
-    naturalKey: `${poi.name.toLowerCase().trim()}|${poi.area.toLowerCase().trim()}`,
+    naturalKey: makeNaturalKey(poi),
   };
 }

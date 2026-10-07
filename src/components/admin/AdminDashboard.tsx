@@ -57,11 +57,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       }
       await refresh();
     } catch (err: any) {
-      if (err.message?.includes("unique") || err.code === 409) {
-        showToast("A POI with this name + area already exists", "error");
-      } else {
-        showToast(err.message || "Save failed", "error");
-      }
+      showToast(err.message || "Save failed", "error");
       throw err;
     }
   };

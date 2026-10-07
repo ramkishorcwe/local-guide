@@ -51,6 +51,7 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
     }
   );
   const [saving, setSaving] = useState(false);
+  const saveInFlight = useRef(false);
   const [error, setError] = useState("");
   const dialog = useRef<HTMLDivElement>(null);
   useDialog(dialog, onClose, saving);
@@ -60,6 +61,8 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
     setError("");
     setSaving(true);
     try {
@@ -68,6 +71,7 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
     } catch (err: any) {
       setError(err.message || "Save failed");
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   };
@@ -85,8 +89,9 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <p className="text-xs text-gray-400">One place per name and area. Edit an existing place to change its details.</p>
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
+            <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -95,6 +100,7 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
             <Field label="Name *">
               <input
                 required
+                aria-label="Place name"
                 value={form.name ?? ""}
                 onChange={(e) => update("name", e.target.value)}
                 className="input"
@@ -124,6 +130,7 @@ export default function POIFormModal({ poi, onClose, onSave }: Props) {
             <Field label="Area *">
               <input
                 required
+                aria-label="Area"
                 value={form.area ?? ""}
                 onChange={(e) => update("area", e.target.value)}
                 className="input"

@@ -1,6 +1,7 @@
 import { databases, DATABASE_ID, POIS_COLLECTION_ID, ID, Query } from './appwrite';
 import type { IPoi } from '../interfaces';
 import { docToPOI, poiToPayload, type POIDocument } from './poiCodec';
+import { saveUniquePOI } from './poiUniqueness';
 export { poiToPayload } from './poiCodec';
 export async function listPOIs(): Promise<IPoi[]> {
   const result: IPoi[] = [];
@@ -15,16 +16,20 @@ export async function listPOIs(): Promise<IPoi[]> {
 }
 export async function createPOI(poi: Partial<IPoi>): Promise<IPoi> {
   validatePOI(poi);
-  const doc = await databases.createDocument({ databaseId: DATABASE_ID, collectionId: POIS_COLLECTION_ID,
-    documentId: ID.unique(), data: poiToPayload(poi) });
+  const data = poiToPayload(poi);
+  const doc = await saveUniquePOI(poi, { list: listPOIs,
+    write: () => databases.createDocument({ databaseId: DATABASE_ID, collectionId: POIS_COLLECTION_ID,
+      documentId: ID.unique(), data }) });
   return docToPOI(doc as unknown as POIDocument);
 }
 export async function updatePOI(id: string, patch: Partial<IPoi>): Promise<IPoi> {
   const previous = await databases.getDocument({ databaseId: DATABASE_ID, collectionId: POIS_COLLECTION_ID, documentId: id });
   const poi = { ...docToPOI(previous as unknown as POIDocument), ...patch };
   validatePOI(poi);
-  const doc = await databases.updateDocument({ databaseId: DATABASE_ID, collectionId: POIS_COLLECTION_ID,
-    documentId: id, data: poiToPayload(poi) });
+  const data = poiToPayload(poi);
+  const doc = await saveUniquePOI(poi, { list: listPOIs, excludeId: id,
+    write: () => databases.updateDocument({ databaseId: DATABASE_ID, collectionId: POIS_COLLECTION_ID,
+      documentId: id, data }) });
   return docToPOI(doc as unknown as POIDocument);
 }
 export async function deletePOI(id: string): Promise<void> {

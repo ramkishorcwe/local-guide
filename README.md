@@ -13,7 +13,7 @@ Open http://127.0.0.1:5173. Vite proxies `/api` to the local Node server on port
 
 Copy `.env.example` to `.env.local` for a fresh checkout. In this workspace, public Appwrite identifiers already live in `.env`; `.env.local` holds server secrets. Set `GEMINI_API_KEY` there. Restart `npm run dev` after changing server environment variables. Never put Gemini or Appwrite API keys in `VITE_*` variables. The existing legacy Appwrite key was moved to `APPWRITE_API_KEY` in the ignored `.env.local`.
 
-**Current external setup:** the supplied Appwrite schema requires double `rating` and a `naturalKey` column with a unique index before seeding; confirm those changes in the Console. See below. Local secrets are kept in ignored `.env.local`; `.env.example` contains blank secret placeholders. The seed uses public POI reads and requires `documents.write` for mutations. Alternatively set `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` for an existing admin account (requires a returned session secret). The latest diagnostic successfully read two public catalogue rows. Gemini function calling and final streaming were verified separately using a fictional cafe, without exporting the live catalogue in the diagnostic.
+**Current external setup:** Appwrite has double `rating` and a `naturalKey` column; the duplicate LMB rows must be resolved before its unique index can be enabled. All 20 source places are present (21 rows while the duplicate remains). Local secrets are kept in ignored `.env.local`; `.env.example` contains blank secret placeholders. The seed prefers `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` for the designated admin and closes its temporary session afterward. Without admin credentials it uses `APPWRITE_API_KEY`, which must have `documents.write`; the currently configured key lacks that scope. Cookie-only Appwrite sessions are supported without requiring a session secret. Gemini function calling and final streaming were verified separately using a fictional cafe, without exporting the live catalogue in the diagnostic.
 
 ## Appwrite
 
@@ -22,7 +22,7 @@ The code now follows the supplied Console schema for POIs/vendors, trips and boo
 | Collection / column | Console configuration | Stored value |
 |---|---|---|
 | POIs / `rating` | **Change integer to double**, range 0–5 | Decimal ratings such as `4.7` |
-| POIs / `naturalKey` | **Add required string/varchar, size 255; unique index** | Lowercase trimmed `name\|area` |
+| POIs / `naturalKey` | **Required string/varchar, size 255; unique index** | Normalized lowercase `name\|area` |
 | POIs / `openHours` | Keep scalar text | JSON object, e.g. `{"mon":"09:00-18:00","tue":"closed"}` |
 | POIs / `foreignerFeeINR` | Keep text | Numeric text, e.g. `"500"`; decoded to a number |
 | POIs / `tags` | Keep text array | `["heritage","kids"]` |
@@ -37,6 +37,10 @@ If records already exist, export them before replacing the integer rating column
 
 Add an ascending `name` index to POIs. Bookings sort by the indexed system column `$createdAt`. Wait until columns/indexes are available before seeding. POI permissions: Any read, and Create/Update/Delete only for your designated admin's **project Auth user ID**. Keep broad Users/Any write grants removed. Trips retain Any read/create + Users CRUD; bookings retain Any read/create for the demo.
 
+POI identity is the combination of name and area: case, Unicode presentation differences and repeated whitespace are ignored. Different areas remain separate branches. Both create and edit check for duplicates before writing and show a message to edit the existing place; editing that same record is allowed. The form also ignores repeated submissions while a save is running. This check improves feedback, while an Appwrite **unique** index on the complete `naturalKey` column rejects concurrent duplicate writes atomically. A plain key index does not enforce uniqueness. See [Appwrite indexes](https://appwrite.io/docs/products/databases/tablesdb/tables#indexes).
+
+For existing duplicates, back up both records, choose which details to retain, and check trips/bookings for references before deleting either ID. Normalize/backfill retained keys, then create `unique_naturalKey` with type **Unique** and column **naturalKey**. Wait for **Available**. All application and seed writes generate this key; direct Console edits must keep it consistent with the name and area.
+
 An account's email or the `/admin` route does not confer Appwrite permissions. Log into the project account whose `$id` has the POI collection's Create/Update/Delete grants. A Console owner account and a project Auth user are separate identities. In an error such as `Missing "create" permission for role "user:A" ... "user:B" ... scopes are allowed`, `A` is the role required by the collection and `B` is the authenticated account making the request. Sign out and log in as `A`, or correct the collection grants if `B` is the intended admin. Creation permissions belong on the collection/table, not individual documents/rows.
 
 Add the localhost and deployed frontend hostnames as Web platforms. Create `admin@localguide.app` with your chosen password in Appwrite Console. `/admin` authenticates through Appwrite email/password sessions. Seeding is explicit, idempotent by name/area, and never runs on guest page loads:
@@ -44,6 +48,8 @@ Add the localhost and deployed frontend hostnames as Web platforms. Create `admi
 ```sh
 npm run seed
 ```
+
+The seed adds missing places from `src/data/pois.ts`, preserves existing IDs and admin edits, then verifies that every source place is present. Re-running it creates no additional rows. It refuses to write when existing rows or the source contain duplicate normalized names and areas, so resolve duplicates first. Concurrent conflicts are re-read and skipped only when the same place now exists.
 
 **SDK gotchas:** installed/tested `appwrite@28.1.0`. Calls use named parameter objects. SDK 13 examples use positional arguments; those remain deprecated overloads in 28, but named objects are not backward compatible with 13. Databases/collections remain available (now deprecated in favour of TablesDB); this project retains them to match your schema. Updates merge the prior POI to avoid resetting omitted fields. Legacy hours arrays split at the first colon, preserving minutes and closing time.
 
@@ -82,7 +88,7 @@ npm run build
 npm run build:function
 ```
 
-Focused tests cover hours/IST/overnight visits, route budgets, unknown IDs, dietary filters, Appwrite codecs, SSE fragmentation, tool history/signatures, cancellation, bounded loops, provider error handling and credential redaction, native Node ESM loading of the API handlers, WhatsApp links and booking deduplication. A live Gemini integration test with a fictional cafe completed search, hours checking, route building and final streamed text in about 43 seconds. Saving shared trips and reservations still require the external permissions above.
+Focused tests cover hours/IST/overnight visits, route budgets, unknown IDs, dietary filters, Appwrite codecs, SSE fragmentation, tool history/signatures, cancellation, bounded loops, provider error handling and credential redaction, native Node ESM loading of the API handlers, WhatsApp links, booking deduplication, normalized POI identity, duplicate creates/renames, concurrent conflicts, and seed preservation/idempotence. A live Gemini integration test with a fictional cafe completed search, hours checking, route building and final streamed text in about 43 seconds. Saving shared trips and reservations still require the external permissions above.
 
 Lint completes with zero errors and three notices on asynchronous Appwrite loading effects.
 
